@@ -1,8 +1,8 @@
 {
-  "name": "packageName",
-  "version": "0.0.0",
-  "description": "",
-  "repository": "unjs/packageName",
+  "name": "rollup-plugin-violent-monkey",
+  "version": "0.0.1",
+  "description": "Prepends ViolentMonkey headers to the bundle",
+  "repository": "https://github.com/jensk-dev/rollup-plugin-violent-monkey",
   "license": "MIT",
   "sideEffects": false,
   "type": "module",
@@ -36,5 +36,9 @@
     "unbuild": "^1.1.1",
     "vitest": "^0.27.1"
   },
-  "packageManager": "pnpm@7.25.0"
+  "packageManager": "pnpm@7.25.0",
+  "dependencies": {
+    "rollup": "^3.10.0",
+    "vite": "^4.0.4"
+  }
 }
