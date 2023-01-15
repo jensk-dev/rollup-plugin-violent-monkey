@@ -1,11 +1,6 @@
-# packageName
+# rollup-plugin-violent-monkey
 
-[![npm version][npm-version-src]][npm-version-href]
-[![npm downloads][npm-downloads-src]][npm-downloads-href]
-[![Github Actions][github-actions-src]][github-actions-href]
-[![Codecov][codecov-src]][codecov-href]
-
-> Package description
+> Prepends ViolentMonkey headers to your rollup bundle
 
 ## Usage
 
@@ -13,47 +8,48 @@ Install package:
 
 ```sh
 # npm
-npm install packageName
-
-# yarn
-yarn add packageName
+npm i -D rollup-plugin-violent-monkey
 
 # pnpm
-pnpm install packageName
+pnpm i -D rollup-plugin-violent-monkey
 ```
 
-Import:
+Vite Usage:
 
 ```js
-// ESM
-import { } from 'packageName'
+// vite.cofig.js
+import { defineConfig } from "vite";
+import ViolentMonkey from "rollup-plugin-violent-monkey";
 
-// CommonJS
-const { } = require('packageName')
+export default defineConfig({
+    build: {
+        rollupOptions: {
+            plugins: [ViolentMonkey()]
+        },
+    },
+});
 ```
 
-## 💻 Development
+Rollup Usage:
 
-- Clone this repository
-- Enable [Corepack](https://github.com/nodejs/corepack) using `corepack enable` (use `npm i -g corepack` for Node.js < 16.10)
-- Install dependencies using `pnpm install`
-- Run interactive tests using `pnpm dev`
+```js
+// rollup.config.js
+import ViolentMonkey from "rollup-plugin-violent-monkey";
 
-## License
+export default {
+    plugins: [ViolentMonkey()]
+};
+```
 
-Made with 💛
+To use the plugin, a metadata file must be provided at the root of your vite/rollup project. Use the included type definitions to add or remove data
 
-Published under [MIT License](./LICENSE).
+```js
+// violentmonkey.metadata.js
+import { defineMetadata } from "rollup-plugin-violent-monkey";
 
-<!-- Badges -->
-[npm-version-src]: https://img.shields.io/npm/v/packageName?style=flat-square
-[npm-version-href]: https://npmjs.com/package/packageName
-
-[npm-downloads-src]: https://img.shields.io/npm/dm/packageName?style=flat-square
-[npm-downloads-href]: https://npmjs.com/package/packageName
-
-[github-actions-src]: https://img.shields.io/github/workflow/status/unjs/packageName/ci/main?style=flat-square
-[github-actions-href]: https://github.com/unjs/packageName/actions?query=workflow%3Aci
-
-[codecov-src]: https://img.shields.io/codecov/c/gh/unjs/packageName/main?style=flat-square
-[codecov-href]: https://codecov.io/gh/unjs/packageName
+export default defineMetadata({
+  name: "My Violent Script",
+  downloadUrl: "github.com/myviolentscriptgist.js",
+  grants: ["GM_addElement", "GM.addStyle", "window.focus"],
+});
+```
