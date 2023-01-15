@@ -2,6 +2,10 @@
 
 > Prepends ViolentMonkey headers to your rollup bundle
 
+## Features
+* Metadata autocomplete using ``defineMetadata`` in ``violentmonkey.metadata.js``
+* Automatically finds grants from code and includes them in the bundle
+
 ## Usage
 
 Install package:
@@ -19,12 +23,12 @@ Vite Usage:
 ```js
 // vite.cofig.js
 import { defineConfig } from "vite";
-import ViolentMonkey from "rollup-plugin-violent-monkey";
+import { plugin as violentMonkey } from "rollup-plugin-violent-monkey";
 
 export default defineConfig({
     build: {
         rollupOptions: {
-            plugins: [ViolentMonkey()]
+            plugins: [violentMonkey()],
         },
     },
 });
@@ -34,10 +38,10 @@ Rollup Usage:
 
 ```js
 // rollup.config.js
-import ViolentMonkey from "rollup-plugin-violent-monkey";
+import { plugin as violentMonkey } from "rollup-plugin-violent-monkey";
 
 export default {
-    plugins: [ViolentMonkey()]
+    plugins: [violentMonkey()],
 };
 ```
 

@@ -119,7 +119,22 @@ function addMetadata(key: string, val: string) {
   return `// @${key} ${val}\n`;
 }
 
-async function getMetadataBlock(): Promise<string> {
+function addGrants(userGrants: string[], generatedGrants: string[]) {
+  const allGrants = [...new Set([...userGrants, ...generatedGrants])];
+  let grants = "";
+
+  if (allGrants.length === 0) {
+    grants += addMetadata("grant", "none");
+  } else {
+    for (const grant of allGrants) {
+      grants += addMetadata("grant", grant);
+    }
+  }
+
+  return grants;
+}
+
+async function getMetadataBlock(grants: string[]): Promise<string> {
   const [schema, cfg] = await Promise.all([
     tryGetSchema(),
     tryGetCfg()
@@ -133,6 +148,7 @@ async function getMetadataBlock(): Promise<string> {
   }
 
   let metadata = "// ==UserScript==\n";
+  let userGrants: string[] = [];
 
   for (const property in cfg) {
     let prop: string;
@@ -145,14 +161,7 @@ async function getMetadataBlock(): Promise<string> {
     }
 
     if (prop === "grants" && Array.isArray(val)) {
-      if (val.length === 0) {
-        metadata += addMetadata("grant", "none");
-      } else {
-        for (const grant of val) {
-          metadata += addMetadata("grant", grant);
-        }
-      }
-
+      userGrants = val;
       continue;
     }
 
@@ -170,6 +179,7 @@ async function getMetadataBlock(): Promise<string> {
     metadata += addMetadata(prop, val as string);
   }
 
+  metadata += addGrants(userGrants, grants);
   metadata += "// ==/UserScript==\n";
 
   return metadata;
@@ -179,7 +189,7 @@ export function defineMetadata(opts: ViolentMonkeyOptions): ViolentMonkeyOptions
   return opts;
 }
 
-export default function ViolentMonkey(): Plugin {
+export function plugin(): Plugin {
   return {
     name: "violent-monkey",
     async generateBundle(_options: OutputOptions, bundle: { [fileName: string]: AssetInfo | ChunkInfo }, _isWrite: boolean): Promise<void> {
@@ -191,7 +201,17 @@ export default function ViolentMonkey(): Plugin {
         }
 
         try {
-          const metadata = await getMetadataBlock();
+          const regex = /(GM(?:\.|_)\S+?|window\.(?:focus|close))\s*?\(/g;
+
+          const grants: string[] = [];
+
+          for (const match of info.code.matchAll(regex)) {
+            if (match.length > 0) {
+              grants.push(match[1]);
+            }
+          }
+
+          const metadata = await getMetadataBlock(grants);
           const code = `${metadata}\n${info.code}`;
 
           info.code = code;
