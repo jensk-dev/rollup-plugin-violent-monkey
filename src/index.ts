@@ -5,67 +5,67 @@ import type { Plugin } from "vite";
 import Ajv from "ajv";
 
 export type ViolentMonkeyGrant =
-  "GM_info" |
-  "GM_getValue" |
-  "GM_setValue" |
-  "GM_deleteValue" |
-  "GM_listValues" |
-  "GM_addValueChangeListener" |
-  "GM_removeValueChangeListener" |
-  "GM_getResourceText" |
-  "GM_getResourceURL" |
-  "GM_addElement" |
-  "GM_addStyle" |
-  "GM_openInTab" |
-  "GM_registerMenuCommand" |
-  "GM_unregisterMenuCommand" |
-  "GM_notification" |
-  "GM_setClipboard" |
-  "GM_xmlhttpRequest" |
-  "GM_download" |
-  "GM.addStyle" |
-  "GM.addElement" |
-  "GM.registerMenuCommand" |
-  "GM.deleteValue" |
-  "GM.getResourceUrl" |
-  "GM.getValue" |
-  "GM.info" |
-  "GM.listValues" |
-  "GM.notification" |
-  "GM.openInTab" |
-  "GM.setClipboard" |
-  "GM.setValue" |
-  "GM.xmlHttpRequest" |
-  "window.close" |
-  "window.focus"
+  | "GM_info"
+  | "GM_getValue"
+  | "GM_setValue"
+  | "GM_deleteValue"
+  | "GM_listValues"
+  | "GM_addValueChangeListener"
+  | "GM_removeValueChangeListener"
+  | "GM_getResourceText"
+  | "GM_getResourceURL"
+  | "GM_addElement"
+  | "GM_addStyle"
+  | "GM_openInTab"
+  | "GM_registerMenuCommand"
+  | "GM_unregisterMenuCommand"
+  | "GM_notification"
+  | "GM_setClipboard"
+  | "GM_xmlhttpRequest"
+  | "GM_download"
+  | "GM.addStyle"
+  | "GM.addElement"
+  | "GM.registerMenuCommand"
+  | "GM.deleteValue"
+  | "GM.getResourceUrl"
+  | "GM.getValue"
+  | "GM.info"
+  | "GM.listValues"
+  | "GM.notification"
+  | "GM.openInTab"
+  | "GM.setClipboard"
+  | "GM.setValue"
+  | "GM.xmlHttpRequest"
+  | "window.close"
+  | "window.focus";
 
 export type ViolentMonkeyOptions = {
-  name: string,
+  name: string;
   localizedName?: {
-    [locale: string]: string
-  },
-  namespace?: string,
-  match?: string,
-  excludeMatch?: string,
-  include?: string,
-  exclude?: string,
-  version?: string,
-  description?: string,
+    [locale: string]: string;
+  };
+  namespace?: string;
+  match?: string;
+  excludeMatch?: string;
+  include?: string;
+  exclude?: string;
+  version?: string;
+  description?: string;
   localizedDescription?: {
-    [locale: string]: string
-  },
-  icon?: string,
-  require?: string,
-  resource?: string,
-  runAt?: "document-end" | "document-start" | "document-idle",
-  noframes?: boolean,
-  grants?: ViolentMonkeyGrant[],
-  injectInto?: "page" | "content" | "auto",
-  downloadUrl?: string,
-  supportUrl?: string,
-  homepageUrl?: string,
-  unwrap?: string
-}
+    [locale: string]: string;
+  };
+  icon?: string;
+  require?: string;
+  resource?: string;
+  runAt?: "document-end" | "document-start" | "document-idle";
+  noframes?: boolean;
+  grants?: ViolentMonkeyGrant[];
+  injectInto?: "page" | "content" | "auto";
+  downloadUrl?: string;
+  supportUrl?: string;
+  homepageUrl?: string;
+  unwrap?: string;
+};
 
 type ChunkInfo = {
   code: string;
@@ -107,7 +107,9 @@ function toKebab(str: string) {
 }
 
 async function tryGetCfg(): Promise<ViolentMonkeyOptions> {
-  const cfgFilePath = pathToFileURL(resolve(process.cwd(), "violentmonkey.metadata.js"));
+  const cfgFilePath = pathToFileURL(
+    resolve(process.cwd(), "violentmonkey.metadata.js")
+  );
   return (await import(cfgFilePath.toString())).default;
 }
 
@@ -135,10 +137,7 @@ function addGrants(userGrants: string[], generatedGrants: string[]) {
 }
 
 async function getMetadataBlock(grants: string[]): Promise<string> {
-  const [schema, cfg] = await Promise.all([
-    tryGetSchema(),
-    tryGetCfg()
-  ]);
+  const [schema, cfg] = await Promise.all([tryGetSchema(), tryGetCfg()]);
 
   const ajv = new Ajv();
   const validate = ajv.compile(schema);
@@ -185,14 +184,20 @@ async function getMetadataBlock(grants: string[]): Promise<string> {
   return metadata;
 }
 
-export function defineMetadata(opts: ViolentMonkeyOptions): ViolentMonkeyOptions {
+export function defineMetadata(
+  opts: ViolentMonkeyOptions
+): ViolentMonkeyOptions {
   return opts;
 }
 
 export function plugin(): Plugin {
   return {
     name: "violent-monkey",
-    async generateBundle(_options: OutputOptions, bundle: { [fileName: string]: AssetInfo | ChunkInfo }, _isWrite: boolean): Promise<void> {
+    async generateBundle(
+      _options: OutputOptions,
+      bundle: { [fileName: string]: AssetInfo | ChunkInfo },
+      _isWrite: boolean
+    ): Promise<void> {
       for (const fileName in bundle) {
         const info = bundle[fileName];
 
