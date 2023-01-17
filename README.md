@@ -2,6 +2,10 @@
 
 > Prepends ViolentMonkey headers to your rollup bundle
 
+## Template
+
+Looking for a simple development environment? Have a look at [vite-violent-monkey](https://github.com/jensk-dev/vite-violent-monkey/).
+
 ## Features
 * Metadata autocomplete using ``defineMetadata`` in ``violentmonkey.metadata.js``
 * Automatically finds grants from code and includes them in the bundle
