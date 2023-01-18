@@ -7,12 +7,13 @@
 Looking for a simple development environment? Have a look at [vite-violent-monkey](https://github.com/jensk-dev/vite-violent-monkey/).
 
 ## Features
-* Metadata autocomplete using ``defineMetadata`` in ``violentmonkey.metadata.js``
-* Automatically finds grants from code and includes them in the bundle
+* Pass metadata directly via the `options` object to the plugin
+* Define an external config file via the `defineMetadata`. Works with TypeScript or JavaScript.
+* Automatically finds grants from all imported modules and includes them in the bundle
 
 ## Usage
 
-Install package:
+### Installation:
 
 ```sh
 # npm
@@ -22,37 +23,43 @@ npm i -D rollup-plugin-violent-monkey
 pnpm i -D rollup-plugin-violent-monkey
 ```
 
-Vite Usage:
+### Using Vite:
 
-```js
-// vite.cofig.js
+```ts
+// vite.cofig.ts
 import { defineConfig } from "vite";
 import { plugin as violentMonkey } from "rollup-plugin-violent-monkey";
 
 export default defineConfig({
     build: {
         rollupOptions: {
-            plugins: [violentMonkey()],
+            plugins: [violentMonkey({
+                // add your script metadata here
+                //...
+            })],
         },
     },
 });
 ```
 
-Rollup Usage:
+### Using Rollup:
 
-```js
+```ts
 // rollup.config.js
 import { plugin as violentMonkey } from "rollup-plugin-violent-monkey";
 
 export default {
-    plugins: [violentMonkey()],
+    plugins: [violentMonkey({
+        // add your script metadata here
+        //...
+    })],
 };
 ```
 
-To use the plugin, a metadata file must be provided at the root of your vite/rollup project. Use the included type definitions to add or remove data
+### Using a standalone config file
 
-```js
-// violentmonkey.metadata.js
+```ts
+// violentmonkey.metadata.ts or violentmonkey.metadata.js
 import { defineMetadata } from "rollup-plugin-violent-monkey";
 
 export default defineMetadata({
@@ -60,4 +67,33 @@ export default defineMetadata({
   downloadUrl: "github.com/myviolentscriptgist.js",
   grants: ["GM_addElement", "GM.addStyle", "window.focus"],
 });
+```
+
+Then import it in your Rollup or Vite config:
+
+```ts
+// vite.config.ts
+import { defineConfig } from "vite";
+import { plugin as violentMonkey } from "rollup-plugin-violent-monkey";
+
+import metadata from "./violentmonkey.metadata"
+
+export default defineConfig({
+    build: {
+        rollupOptions: {
+            plugins: [violentMonkey(metadata)],
+        },
+    },
+});
+```
+
+```js
+// rollup.config.js
+import { plugin as violentMonkey } from "rollup-plugin-violent-monkey";
+
+import metadata from "./violentmonkey.metadata"
+
+export default {
+    plugins: [violentMonkey(metadata)],
+};
 ```

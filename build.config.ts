@@ -1,5 +1,13 @@
 import { defineBuildConfig } from "unbuild";
 
 export default defineBuildConfig({
-  externals: ["vite"]
+  externals: ["vite"],
+  declaration: true,
+  clean: true,
+  failOnWarn: true,
+  rollup: {
+    esbuild: {
+      minify: true
+    }
+  }
 });

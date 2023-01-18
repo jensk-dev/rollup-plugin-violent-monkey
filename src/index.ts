@@ -1,7 +1,7 @@
 import type { OutputOptions, SourceMap } from "rollup";
 import type { Plugin } from "vite";
 
-import { metadata as metadataParser, Metadata, grant as grantParser, Grant, primitiveField } from "./schema";
+import { metadata as metadataParser, Metadata, grant as grantParser, Grant, primitiveField, MetadataKey } from "./schema";
 
 type ChunkInfo = {
   code: string;
@@ -44,11 +44,11 @@ export function defineMetadata(
   return opts;
 }
 
-export function plugin(metadata: Metadata): Plugin {
+export async function plugin(metadata: Metadata): Promise<Plugin> {
   const _moduleGrants: Map<string, Grant[]> = new Map();
   const _grantRegex: RegExp = /(GM(?:\.|_)\S+?|window\.(?:focus|close))\s*?\(/g;
-  let _defaultGrants: Grant[] = [];
-  let _headers: string[] = [];
+  const _defaultGrants: Grant[] = [];
+  const _headers: string[] = [];
 
   function addMetadata(key: string, val: string) {
     return `// @${key} ${val}\n`;
@@ -58,69 +58,65 @@ export function plugin(metadata: Metadata): Plugin {
     return str.replace(/[A-Z]/g, char => `-${char.toLowerCase()}`);
   }
 
+  if (!metadata) {
+    throw new Error("Required parameter metadata is undefined");
+  }
+
+  const result = await metadataParser.safeParseAsync(metadata);
+
+  if (!result.success) {
+    const err = result.error.errors.pop();
+
+    throw new Error(`Validation of Violent Monkey metadata failed: metadata.${err?.path.join(".")} (${err?.message})`);
+  }
+
+  const md = result.data;
+
+  if (md.grants) {
+    _defaultGrants.push(...md.grants);
+  }
+
+  for (const field in md) {
+    const result = primitiveField.safeParse(md[field as MetadataKey]);
+
+    if (!result.success || !result.data) {
+      continue;
+    }
+
+    let fmt: string;
+
+    if (field.endsWith("Url")) {
+      fmt = field.replace("Url", "URL");
+    } else {
+      fmt = toKebab(field);
+    }
+
+    _headers.push(addMetadata(fmt, result.data as string));
+  }
+
+  if (md.resources) {
+    for (const key in md.resources) {
+      const value = md.resources[key];
+      _headers.push(addMetadata("resource", `${key} ${value}`));
+    }
+  }
+
+  if (md.localizedDescription) {
+    for (const key in md.localizedDescription) {
+      const value = md.localizedDescription[key];
+      _headers.push(addMetadata(`description:${key}`, value));
+    }
+  }
+
+  if (md.localizedName) {
+    for (const key in md.localizedName) {
+      const value = md.localizedName[key];
+      _headers.push(addMetadata(`name:${key}`, value));
+    }
+  }
+
   return {
     name: "violent-monkey",
-    async buildStart() {
-      if (!metadata) {
-        this.error("Required parameter metadata is undefined");
-      }
-
-      const result = await metadataParser.safeParseAsync(metadata);
-
-      if (!result.success) {
-        this.error(result.error);
-        return;
-      }
-
-      const md = result.data;
-
-      // todo: Read and initialize metadata only once
-      _headers = [];
-      _defaultGrants = [];
-
-      if (md.grants) {
-        _defaultGrants.push(...md.grants);
-      }
-
-      for (const field in md) {
-        const result = primitiveField.safeParse(md[field as never] as unknown);
-
-        if (!result.success || !result.data) {
-          continue;
-        }
-
-        let fmt: string;
-
-        if (field.endsWith("Url")) {
-          fmt = field.replace("Url", "URL");
-        } else {
-          fmt = toKebab(field);
-        }
-
-        _headers.push(addMetadata(fmt, result.data as string));
-      }
-
-      if (md.resources) {
-        for (const key in md.resources) {
-          const value = md.resources[key];
-          _headers.push(addMetadata("resource", `${key} ${value}`));
-        }
-      }
-
-      if (md.localizedDescription) {
-        for (const key in md.localizedDescription) {
-          const value = md.localizedDescription[key];
-          _headers.push(addMetadata(`description:${key}`, value));
-        }
-      }
-
-      if (md.localizedName) {
-        for (const key in md.localizedName) {
-          const value = md.localizedName[key];
-          _headers.push(addMetadata(`name:${key}`, value));
-        }
-      }
-    },
     /**
      * Store all grants found in the code.
      */

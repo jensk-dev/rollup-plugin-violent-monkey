@@ -79,3 +79,7 @@ export const metadata = z.object({
 });
 
 export type Metadata = z.infer<typeof metadata>;
+
+export const metadataKey = metadata.keyof();
+
+export type MetadataKey = z.infer<typeof metadataKey>;
