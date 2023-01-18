@@ -1,71 +1,7 @@
-import { resolve } from "path";
-import { pathToFileURL } from "url";
 import type { OutputOptions, SourceMap } from "rollup";
 import type { Plugin } from "vite";
-import Ajv from "ajv";
 
-export type ViolentMonkeyGrant =
-  | "GM_info"
-  | "GM_getValue"
-  | "GM_setValue"
-  | "GM_deleteValue"
-  | "GM_listValues"
-  | "GM_addValueChangeListener"
-  | "GM_removeValueChangeListener"
-  | "GM_getResourceText"
-  | "GM_getResourceURL"
-  | "GM_addElement"
-  | "GM_addStyle"
-  | "GM_openInTab"
-  | "GM_registerMenuCommand"
-  | "GM_unregisterMenuCommand"
-  | "GM_notification"
-  | "GM_setClipboard"
-  | "GM_xmlhttpRequest"
-  | "GM_download"
-  | "GM.addStyle"
-  | "GM.addElement"
-  | "GM.registerMenuCommand"
-  | "GM.deleteValue"
-  | "GM.getResourceUrl"
-  | "GM.getValue"
-  | "GM.info"
-  | "GM.listValues"
-  | "GM.notification"
-  | "GM.openInTab"
-  | "GM.setClipboard"
-  | "GM.setValue"
-  | "GM.xmlHttpRequest"
-  | "window.close"
-  | "window.focus";
-
-export type ViolentMonkeyOptions = {
-  name: string;
-  localizedName?: {
-    [locale: string]: string;
-  };
-  namespace?: string;
-  match?: string;
-  excludeMatch?: string;
-  include?: string;
-  exclude?: string;
-  version?: string;
-  description?: string;
-  localizedDescription?: {
-    [locale: string]: string;
-  };
-  icon?: string;
-  require?: string;
-  resource?: string;
-  runAt?: "document-end" | "document-start" | "document-idle";
-  noframes?: boolean;
-  grants?: ViolentMonkeyGrant[];
-  injectInto?: "page" | "content" | "auto";
-  downloadUrl?: string;
-  supportUrl?: string;
-  homepageUrl?: string;
-  unwrap?: string;
-};
+import { metadata as metadataParser, Metadata, grant as grantParser, Grant, primitiveField } from "./schema";
 
 type ChunkInfo = {
   code: string;
@@ -102,127 +38,155 @@ type AssetInfo = {
   type: "asset";
 };
 
-function toKebab(str: string) {
-  return str.replace(/[A-Z]/g, char => `-${char.toLowerCase()}`);
-}
-
-async function tryGetCfg(): Promise<ViolentMonkeyOptions> {
-  const cfgFilePath = pathToFileURL(
-    resolve(process.cwd(), "violentmonkey.metadata.js")
-  );
-  return (await import(cfgFilePath.toString())).default;
-}
-
-async function tryGetSchema(): Promise<any> {
-  return (await import("./schema.json")).default;
-}
-
-function addMetadata(key: string, val: string) {
-  return `// @${key} ${val}\n`;
-}
-
-function addGrants(userGrants: string[], generatedGrants: string[]) {
-  const allGrants = [...new Set([...userGrants, ...generatedGrants])];
-  let grants = "";
-
-  if (allGrants.length === 0) {
-    grants += addMetadata("grant", "none");
-  } else {
-    for (const grant of allGrants) {
-      grants += addMetadata("grant", grant);
-    }
-  }
-
-  return grants;
-}
-
-async function getMetadataBlock(grants: string[]): Promise<string> {
-  const [schema, cfg] = await Promise.all([tryGetSchema(), tryGetCfg()]);
-
-  const ajv = new Ajv();
-  const validate = ajv.compile(schema);
-
-  if (!validate(cfg) && validate.errors && validate.errors.length > 0) {
-    throw new Error("Config is not valid.");
-  }
-
-  let metadata = "// ==UserScript==\n";
-  let userGrants: string[] = [];
-
-  for (const property in cfg) {
-    let prop: string;
-    const val = cfg[property as never] as unknown;
-
-    if (property.endsWith("Url")) {
-      prop = property.replace("Url", "URL");
-    } else {
-      prop = toKebab(property);
-    }
-
-    if (prop === "grants" && Array.isArray(val)) {
-      userGrants = val;
-      continue;
-    }
-
-    if (prop.startsWith("localized") && typeof val === "object") {
-      for (const locale in val) {
-        metadata += addMetadata(
-          `${prop.split("-")[1]}:${locale}`,
-          val[locale as never] as string
-        );
-      }
-
-      continue;
-    }
-
-    metadata += addMetadata(prop, val as string);
-  }
-
-  metadata += addGrants(userGrants, grants);
-  metadata += "// ==/UserScript==\n";
-
-  return metadata;
-}
-
 export function defineMetadata(
-  opts: ViolentMonkeyOptions
-): ViolentMonkeyOptions {
+  opts: Metadata
+): Metadata {
   return opts;
 }
 
-export function plugin(): Plugin {
+export function plugin(metadata: Metadata): Plugin {
+  const _moduleGrants: Map<string, Grant[]> = new Map();
+  const _grantRegex: RegExp = /(GM(?:\.|_)\S+?|window\.(?:focus|close))\s*?\(/g;
+  let _defaultGrants: Grant[] = [];
+  let _headers: string[] = [];
+
+  function addMetadata(key: string, val: string) {
+    return `// @${key} ${val}\n`;
+  }
+
+  function toKebab(str: string) {
+    return str.replace(/[A-Z]/g, char => `-${char.toLowerCase()}`);
+  }
+
   return {
     name: "violent-monkey",
-    async generateBundle(
-      _options: OutputOptions,
-      bundle: { [fileName: string]: AssetInfo | ChunkInfo },
-      _isWrite: boolean
-    ): Promise<void> {
-      for (const fileName in bundle) {
-        const info = bundle[fileName];
+    async buildStart() {
+      if (!metadata) {
+        this.error("Required parameter metadata is undefined");
+      }
 
-        if (info.type !== "chunk" || !info.isEntry) {
+      const result = await metadataParser.safeParseAsync(metadata);
+
+      if (!result.success) {
+        this.error(result.error);
+        return;
+      }
+
+      const md = result.data;
+
+      // todo: Read and initialize metadata only once
+      _headers = [];
+      _defaultGrants = [];
+
+      if (md.grants) {
+        _defaultGrants.push(...md.grants);
+      }
+
+      for (const field in md) {
+        const result = primitiveField.safeParse(md[field as never] as unknown);
+
+        if (!result.success || !result.data) {
           continue;
         }
 
-        try {
-          const regex = /(GM(?:\.|_)\S+?|window\.(?:focus|close))\s*?\(/g;
+        let fmt: string;
 
-          const grants: string[] = [];
-
-          for (const match of info.code.matchAll(regex)) {
-            if (match.length > 0) {
-              grants.push(match[1]);
-            }
-          }
-
-          const metadata = await getMetadataBlock(grants);
-          const code = `${metadata}\n${info.code}`;
-
-          info.code = code;
-        } catch (err) {
-          this.warn((err as Error).message);
+        if (field.endsWith("Url")) {
+          fmt = field.replace("Url", "URL");
+        } else {
+          fmt = toKebab(field);
         }
+
+        _headers.push(addMetadata(fmt, result.data as string));
+      }
+
+      if (md.resources) {
+        for (const key in md.resources) {
+          const value = md.resources[key];
+          _headers.push(addMetadata("resource", `${key} ${value}`));
+        }
+      }
+
+      if (md.localizedDescription) {
+        for (const key in md.localizedDescription) {
+          const value = md.localizedDescription[key];
+          _headers.push(addMetadata(`description:${key}`, value));
+        }
+      }
+
+      if (md.localizedName) {
+        for (const key in md.localizedName) {
+          const value = md.localizedName[key];
+          _headers.push(addMetadata(`name:${key}`, value));
+        }
+      }
+    },
+    /**
+     * Store all grants found in the code.
+     */
+    async transform(code, id) {
+      const grants: Grant[] = [];
+
+      // find all grants from code and parse and validate them
+      for (const match of code.matchAll(_grantRegex)) {
+        if (match.length > 0) {
+          const res = await grantParser.safeParseAsync(match[1]);
+
+          if (res.success) {
+            grants.push(res.data);
+          }
+        }
+      }
+
+      // filter all duplicate grants
+      _moduleGrants.set(id, [...new Set(grants)]);
+
+      return code;
+    },
+    generateBundle(
+      _options: OutputOptions,
+      bundle: { [fileName: string]: AssetInfo | ChunkInfo },
+      _isWrite: boolean
+    ) {
+      const headers: string[] = [..._headers];
+
+      // Get all grants from config & code and append to header
+      let grants: Grant[] = [];
+
+      // Get module grants
+      for (const kvp of _moduleGrants) {
+        grants.push(...kvp[1]);
+      }
+
+      // Combine module grants and default grants
+      grants = [...new Set([...grants, ..._defaultGrants])].sort();
+
+      if (grants.length > 0) {
+        for (const grant of grants) {
+          headers.push(addMetadata("grant", grant));
+        }
+      } else {
+        headers.push(addMetadata("grant", "none"));
+      }
+
+      // Generate metadata
+      let metadataBlock = "// ==UserScript==\n";
+
+      for (const header of headers) {
+        metadataBlock += header;
+      }
+
+      metadataBlock += "// ==/UserScript==\n";
+
+      // Append to the entrypoints
+      for (const fileName in bundle) {
+        const fileInfo = bundle[fileName];
+
+        if (fileInfo.type !== "chunk" || !fileInfo.isEntry) {
+          continue;
+        }
+
+        fileInfo.code = `${metadataBlock}\n${fileInfo.code}`;
       }
     }
   } as Plugin;
