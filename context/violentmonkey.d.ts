@@ -95,7 +95,7 @@ declare global {
   function GM_addElement(
     parentNode: OptionalNode,
     tagName: keyof HTMLElementTagNameMap,
-    attributes: HTMLAttributeMap
+    attributes?: HTMLAttributeMap
   ): HTMLElement;
 
   /**
@@ -182,7 +182,7 @@ declare global {
     addElement(
       parentNode: OptionalNode,
       tagName: keyof HTMLElementTagNameMap,
-      attributes: HTMLAttributeMap
+      attributes?: HTMLAttributeMap
     ): HTMLElement;
     registerMenuCommand(
       caption: MenuCaption,
