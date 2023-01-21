@@ -51,6 +51,27 @@ const optionalBool = z.boolean().optional();
 
 export const primitiveField = optionalString.or(optionalUrl).or(optionalBool);
 
+/**
+ * Specifies when the script should be injected into the page.
+ */
+export const runAt = z.enum([
+  /**
+   * The script executes when DOMContentLoaded is fired.
+   * At this time, the basic HTML of the page is ready and other resources like images might still be on the way.
+   */
+  "document-end",
+  /**
+   * The script executes as soon as possible. There is no guarantee for the script to execute before other scripts in the page.
+   * Note: in Greasemonkey v3, the script may be ensured to execute even before HTML is loaded,
+   *       but this is impossible for Violentmonkey as a web extension.
+   */
+  "document-start",
+  /**
+   * The script executes after DOMContentLoaded is fired.
+   */
+  "document-idle"
+]);
+
 export const metadata = z.object({
   name: z.string().min(1),
   localizedName: localeMap,
@@ -68,7 +89,8 @@ export const metadata = z.object({
     z.string().min(1).regex(/^[^\s]+$/),
     z.string().url()
   ).optional(),
-  runAt: z.enum(["document-end", "document-start", "document-idle"]).optional(),
+  /** Decides when the script will be injected into the page. */
+  runAt: runAt.optional(),
   noframes: optionalBool,
   grants: grant.array().optional(),
   injectInto: z.enum(["page", "content", "auto"]).optional(),
