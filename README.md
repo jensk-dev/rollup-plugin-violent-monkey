@@ -8,8 +8,9 @@ Looking for a simple development environment? Have a look at [vite-violent-monke
 
 ## Features
 * Pass metadata directly via the `options` object to the plugin
-* Define an external config file via the `defineMetadata`. Works with TypeScript or JavaScript.
+* Define an external config file via the `defineMetadata`. Works with TypeScript or JavaScript including type completion and validation.
 * Automatically finds grants from all imported modules and includes them in the bundle
+* Importable type declarations for the `GM_*` & `GM.*` [API](https://violentmonkey.github.io/api/gm/) supported by ViolentMonkey.
 
 ## Usage
 
@@ -96,4 +97,12 @@ import metadata from "./violentmonkey.metadata"
 export default {
     plugins: [violentMonkey(metadata)],
 };
+```
+
+### Importing ViolentMonkey type declarations
+
+Create a `.d.ts` file in the root of your source directory, and add the following:
+
+```ts
+/// <reference types="rollup-plugin-violent-monkey/context/violentmonkey" />
 ```
