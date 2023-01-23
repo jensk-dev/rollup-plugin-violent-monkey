@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-violent-monkey",
-  "version": "0.0.8",
+  "version": "0.0.8b",
   "description": "Prepends ViolentMonkey headers to your rollup bundle",
   "repository": "https://github.com/jensk-dev/rollup-plugin-violent-monkey",
   "license": "MIT",

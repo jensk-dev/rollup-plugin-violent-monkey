@@ -1,16 +1,22 @@
 # rollup-plugin-violent-monkey
 
-> Prepends ViolentMonkey headers to your rollup bundle
+## Disclaimer
+
+> rollup-plugin-violent-monkey is actively being developed. The API is rapidly changing and considered unstable. Install or upgrade at your own risk!
 
 ## Template
 
 Looking for a simple development environment? Have a look at [vite-violent-monkey](https://github.com/jensk-dev/vite-violent-monkey/).
 
 ## Features
-* Pass metadata directly via the `options` object to the plugin
-* Define an external config file via the `defineMetadata`. Works with TypeScript or JavaScript including type completion and validation.
+* Pass metadata directly via the `options` object to the plugin. Works with TypeScript or JavaScript including type completion and validation.
+* Define an external config file via the `defineMetadata`.
 * Automatically finds grants from all imported modules and includes them in the bundle
 * Importable type declarations for the `GM_*` & `GM.*` [API](https://violentmonkey.github.io/api/gm/) supported by ViolentMonkey.
+
+### Planned
+
+* Add `@require` fields based on code imports, excluding type imports.
 
 ## Usage
 
