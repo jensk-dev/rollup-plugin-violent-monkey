@@ -1,45 +1,10 @@
-import type { OutputOptions, SourceMap } from "rollup";
+import type { OutputOptions } from "rollup";
 import type { Plugin } from "vite";
 
 import { RawMetadata } from "./schema/index";
 import { Grant, isGrant } from "./schema/primitives";
 
 import { UserScript } from "./user-script";
-
-type ChunkInfo = {
-  code: string;
-  dynamicImports: string[];
-  exports: string[];
-  facadeModuleId: string | null;
-  fileName: string;
-  implicitlyLoadedBefore: string[];
-  imports: string[];
-  importedBindings: { [imported: string]: string[] };
-  isDynamicEntry: boolean;
-  isEntry: boolean;
-  isImplicitEntry: boolean;
-  map: SourceMap | null;
-  modules: {
-    [id: string]: {
-      renderedExports: string[];
-      removedExports: string[];
-      renderedLength: number;
-      originalLength: number;
-      code: string | null;
-    };
-  };
-  moduleIds: string[];
-  name: string;
-  referencedFiles: string[];
-  type: "chunk";
-};
-
-type AssetInfo = {
-  fileName: string;
-  name?: string;
-  source: string | Uint8Array;
-  type: "asset";
-};
 
 export function defineMetadata(opts: RawMetadata): RawMetadata {
   return opts;
@@ -80,7 +45,7 @@ export async function plugin(metadata: RawMetadata): Promise<Plugin> {
     },
     generateBundle(
       _options: OutputOptions,
-      bundle: { [fileName: string]: AssetInfo | ChunkInfo },
+      bundle,
       _isWrite: boolean
     ) {
       /**
