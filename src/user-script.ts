@@ -45,8 +45,24 @@ export class UserScript {
     return new Set([...value]) as K;
   }
 
+  private areEqual<T>(s1: Set<T>, s2: Set<T>) {
+    if (s1.size !== s2.size) {
+      return false;
+    }
+
+    for (const value of s1.values()) {
+      if (!s2.has(value)) {
+        return false;
+      };
+    }
+
+    return true;
+  }
+
   public setSet<T extends SetsKey, K extends Sets[T]>(key: T, value: K) {
-    if (!value) {
+    const existing = this.sets[key];
+
+    if (!value || (existing && this.areEqual(existing, value))) {
       return;
     }
 
