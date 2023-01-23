@@ -72,19 +72,21 @@ export const runAt = z.enum([
   "document-idle"
 ]);
 
+const optStrings = z.string().min(1).array().optional();
+
 export const metadata = z.object({
   name: z.string().min(1),
   localizedName: localeMap,
   namespace: optionalString,
-  match: optionalString,
-  excludeMatch: optionalString,
-  include: optionalString,
-  exclude: optionalString,
+  match: optStrings,
+  excludeMatch: optStrings,
+  include: optStrings,
+  exclude: optStrings,
   version: optionalString,
   description: optionalString,
   localizedDescription: localeMap,
   icon: optionalUrl,
-  require: optionalUrl,
+  require: z.string().url().array().optional(),
   resources: z.record(
     z.string().min(1).regex(/^[^\s]+$/),
     z.string().url()

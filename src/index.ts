@@ -94,6 +94,27 @@ export async function plugin(metadata: Metadata): Promise<Plugin> {
     _headers.push(addMetadata(fmt, result.data as string));
   }
 
+  if (md.require) {
+    _headers.push(...md.require.map(r => addMetadata("require", r)));
+  }
+
+  if (md.include) {
+    _headers.push(...md.include.map(i => addMetadata("include", i)));
+  }
+
+  if (md.exclude) {
+    _headers.push(...md.exclude.map(e => addMetadata("exclude", e)));
+  }
+
+  if (md.match) {
+    _headers.push(...md.match.map(m => addMetadata("match", m)));
+  }
+
+  if (md.excludeMatch) {
+    _headers.push(...md.excludeMatch.map(em => addMetadata("exclude-match", em)));
+  }
+
+
   if (md.resources) {
     for (const key in md.resources) {
       const value = md.resources[key];
