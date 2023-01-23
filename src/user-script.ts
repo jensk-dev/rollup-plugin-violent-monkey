@@ -1,85 +1,28 @@
-import { arrayFields, MetaArrays, Metadata, MetaRecords, MetaSingles, recordFields, singleFields } from "./schema";
-
-function recordsToMap<T extends string | number | symbol, K>(records: Record<T, K>): Map<T, K> {
-  const map = new Map<T, K>();
-
-  for (const key in records) {
-    map.set(key, records[key]);
-  }
-
-  return map;
-}
-
-function arrayToSet<T>(array: T[]): Set<T> {
-  const set = new Set<T>(array);
-  return set;
-}
-
-type MetaSinglesKey = keyof MetaSingles;
-type MetaSinglesValue = MetaSingles[MetaSinglesKey];
-
-type MetaArraysKey = keyof MetaArrays;
-// type MetaArraysValue = MetaArrays[MetaArraysKey];
-
-type MetaRecordsKey = keyof MetaRecords;
-// type MetaRecordsValue = MetaRecords[MetaRecordsKey];
+import { isMaps, isPrimitives, isSets, Maps, Primitives, RawMetadata, Sets } from "./schema/complex";
 
 export class UserScript {
-  private singles: Map<MetaSinglesKey, MetaSinglesValue>;
-  private arrays: Map<MetaArraysKey, Set<string>>; // todo, infer type from MetaArrays[MetaArraysKey][number]
-  private records: Map<MetaRecordsKey, Map<string, string>>;
+  private primitives: Primitives;
+  private sets: Sets; // todo, infer type from MetaArrays[MetaArraysKey][number]
+  private maps: Maps;
 
   constructor(name: string) {
-    this.singles = new Map();
-    this.arrays = new Map();
-    this.records = new Map();
-
-    this.singles.set("name", name);
+    this.primitives = isPrimitives.parse({ name });
+    this.sets = { };
+    this.maps = { };
   }
 
-  public static async from(metadata: Metadata) {
-    const [singles, arrays, records] = await Promise.all([
-      singleFields.parseAsync(metadata),
-      arrayFields.parseAsync(metadata),
-      recordFields.parseAsync(metadata)
+  public static async from(metadata: RawMetadata) {
+    const [primitives, sets, maps] = await Promise.all([
+      isPrimitives.parseAsync(metadata),
+      isSets.parseAsync(metadata),
+      isMaps.parseAsync(metadata)
     ]);
 
-    const script = new UserScript(singles.name);
+    const script = new UserScript(primitives.name);
 
-    for (const key in arrays) {
-      const tKey = key as MetaArraysKey;
-      const value = arrays[tKey];
-
-      if (!Array.isArray(value)) {
-        continue;
-      }
-
-      const set = arrayToSet(value);
-      script.arrays.set(tKey, set);
-    }
-
-    for (const key in records) {
-      const tKey = key as MetaRecordsKey;
-      const value = records[tKey];
-
-      if (!value) {
-        continue;
-      }
-
-      const map = recordsToMap(value);
-      script.records.set(tKey, map);
-    }
-
-    for (const key in singles) {
-      const tKey = key as MetaSinglesKey;
-      const value = singles[tKey];
-
-      if (!value) {
-        continue;
-      }
-
-      script.singles.set(tKey, value);
-    }
+    script.primitives = primitives;
+    script.sets = sets;
+    script.maps = maps;
 
     return script;
   }
