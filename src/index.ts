@@ -1,5 +1,8 @@
 import type { OutputOptions } from "rollup";
 import type { Plugin } from "vite";
+import { ofetch } from "ofetch";
+
+import { RequireResolver } from "./require-resolver";
 
 import { RawMetadata } from "./schema/index";
 import { Grant, isGrant } from "./schema/primitives";
@@ -19,6 +22,46 @@ export async function plugin(metadata: RawMetadata): Promise<Plugin> {
 
   return {
     name: "violent-monkey",
+    resolveId(source, _importer, _opts) {
+      const id = "\0" + source;
+
+      if (!id.startsWith(RequireResolver.prefix)) {
+        return null;
+      }
+
+      let url: URL;
+
+      try {
+        url = new URL(id.slice(RequireResolver.prefix.length));
+      } catch (err) {
+        return null;
+      }
+
+      return {
+        id,
+        // external: true,
+        moduleSideEffects: true,
+        meta: {
+          url
+        }
+      };
+    },
+    async load(id, _opts) {
+      if (!id.startsWith(RequireResolver.prefix)) {
+        return null;
+      }
+
+      const info = await this.getModuleInfo(id);
+
+      const js = await ofetch(info?.meta.url, {
+        parseResponse: txt => txt,
+        headers: {
+          Accept: "application/javascript"
+        }
+      });
+
+      return js;
+    },
     /**
      * Store all grants found in the code.
      */
