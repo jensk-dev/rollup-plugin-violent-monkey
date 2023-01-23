@@ -1,7 +1,14 @@
 import type { OutputOptions, SourceMap } from "rollup";
 import type { Plugin } from "vite";
 
-import { metadata as metadataParser, Metadata, grant as grantParser, Grant, primitiveField, MetadataKey } from "./schema";
+import {
+  metadata as metadataParser,
+  Metadata,
+  grant as grantParser,
+  Grant,
+  primitiveField,
+  MetadataKey
+} from "./schema";
 
 type ChunkInfo = {
   code: string;
@@ -38,9 +45,7 @@ type AssetInfo = {
   type: "asset";
 };
 
-export function defineMetadata(
-  opts: Metadata
-): Metadata {
+export function defineMetadata(opts: Metadata): Metadata {
   return opts;
 }
 
@@ -67,7 +72,11 @@ export async function plugin(metadata: Metadata): Promise<Plugin> {
   if (!result.success) {
     const err = result.error.errors.pop();
 
-    throw new Error(`Validation of Violent Monkey metadata failed: metadata.${err?.path.join(".")} (${err?.message})`);
+    throw new Error(
+      `Validation of Violent Monkey metadata failed: metadata.${err?.path.join(
+        "."
+      )} (${err?.message})`
+    );
   }
 
   const md = result.data;
@@ -111,9 +120,10 @@ export async function plugin(metadata: Metadata): Promise<Plugin> {
   }
 
   if (md.excludeMatch) {
-    _headers.push(...md.excludeMatch.map(em => addMetadata("exclude-match", em)));
+    _headers.push(
+      ...md.excludeMatch.map(em => addMetadata("exclude-match", em))
+    );
   }
-
 
   if (md.resources) {
     for (const key in md.resources) {
