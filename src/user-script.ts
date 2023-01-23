@@ -1,3 +1,4 @@
+import { ZodError } from "zod";
 import { isMaps, isPrimitives, isSets, Maps, Metadata, Primitives, RawMetadata, Sets } from "./schema/complex";
 
 export class UserScript {
@@ -41,19 +42,34 @@ export class UserScript {
   }
 
   public static async from(metadata: RawMetadata) {
-    const [primitives, sets, maps] = await Promise.all([
-      isPrimitives.parseAsync(metadata),
-      isSets.parseAsync(metadata),
-      isMaps.parseAsync(metadata)
-    ]);
+    try {
+      const [primitives, sets, maps] = await Promise.all([
+        isPrimitives.parseAsync(metadata),
+        isSets.parseAsync(metadata),
+        isMaps.parseAsync(metadata)
+      ]);
 
-    const script = new UserScript(primitives.name);
+      const script = new UserScript(primitives.name);
 
-    script.primitives = primitives;
-    script.sets = sets;
-    script.maps = maps;
+      script.primitives = primitives;
+      script.sets = sets;
+      script.maps = maps;
 
-    return script;
+      return script;
+    } catch (err) {
+      if (err instanceof ZodError) {
+        const issue = err.issues.shift();
+        throw new TypeError(
+          `Validation of Violent Monkey metadata failed: metadata.${
+            issue?.path.join(".")
+          } (${
+            issue?.message
+          })`
+        );
+      }
+
+      throw err;
+    }
   }
 
   private static formatMetadata(key: string, val: string) {
