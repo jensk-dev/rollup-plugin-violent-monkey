@@ -78,7 +78,7 @@ export async function plugin(metadata: RawMetadata): Promise<Plugin> {
 
       return code;
     },
-    generateBundle(
+    async generateBundle(
       _options: OutputOptions,
       bundle: { [fileName: string]: AssetInfo | ChunkInfo },
       _isWrite: boolean
