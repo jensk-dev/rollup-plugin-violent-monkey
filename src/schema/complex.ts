@@ -70,7 +70,7 @@ export const isSets = z.object({
   include: isNonEmtpyStrings.optional(),
   exclude: isNonEmtpyStrings.optional(),
   grants: isGrants.optional(),
-  require: isUrl.array().optional()
+  require: isUrl.array().transform(toSet).optional()
 });
 export type Sets = z.infer<typeof isSets>;
 
