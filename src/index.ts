@@ -9,6 +9,7 @@ import {
   primitiveField,
   MetadataKey
 } from "./schema";
+import { UserScript } from "./user-script";
 
 type ChunkInfo = {
   code: string;
@@ -50,6 +51,10 @@ export function defineMetadata(opts: Metadata): Metadata {
 }
 
 export async function plugin(metadata: Metadata): Promise<Plugin> {
+  const script = await UserScript.from(metadata);
+
+  console.log(script);
+
   const _moduleGrants: Map<string, Grant[]> = new Map();
   const _grantRegex: RegExp = /(GM(?:\.|_)\S+?|window\.(?:focus|close))\s*?\(/g;
   const _defaultGrants: Grant[] = [];

@@ -38,10 +38,15 @@ export const grant = z.enum([
 
 export type Grant = z.infer<typeof grant>;
 
-const localeMap = z.record(
-  z.string().regex(/^[a-z]{2}-[A-Z]{2}$/).length(5),
-  z.string().min(1)
-).optional();
+const localeMap = z
+  .record(
+    z
+      .string()
+      .regex(/^[a-z]{2}-[A-Z]{2}$/)
+      .length(5),
+    z.string().min(1)
+  )
+  .optional();
 
 export type LocaleMap = z.infer<typeof localeMap>;
 
@@ -70,39 +75,59 @@ export const runAt = z.enum([
    * The script executes after DOMContentLoaded is fired.
    */
   "document-idle"
-]);
+]).default("document-end")
+  .optional();
 
-const optStrings = z.string().min(1).array().optional();
+const injectInto = z.enum([
+  "page",
+  "content",
+  "auto"
+]).default("page")
+  .optional();
 
-export const metadata = z.object({
+export const singleFields = z.object({
   name: z.string().min(1),
-  localizedName: localeMap,
   namespace: optionalString,
-  match: optStrings,
-  excludeMatch: optStrings,
-  include: optStrings,
-  exclude: optStrings,
   version: optionalString,
   description: optionalString,
-  localizedDescription: localeMap,
   icon: optionalUrl,
-  require: z.string().url().array().optional(),
-  resources: z.record(
-    z.string().min(1).regex(/^[^\s]+$/),
-    z.string().url()
-  ).optional(),
-  /** Decides when the script will be injected into the page. */
-  runAt: runAt.optional(),
-  noframes: optionalBool,
-  grants: grant.array().optional(),
-  injectInto: z.enum(["page", "content", "auto"]).optional(),
   downloadUrl: optionalUrl,
   supportUrl: optionalUrl,
   homepageUrl: optionalUrl,
+  runAt,
+  injectInto,
+  noframes: optionalBool,
   unwrap: optionalBool
 });
 
+export const recordFields = z.object({
+  localizedName: localeMap,
+  localizedDescription: localeMap,
+  resources: z.record(
+    z.string().min(1).regex(/^[^\s]+$/),
+    z.string().url()
+  ).optional()
+});
+
+const stringArrayOpt = z.string().min(1).array().optional();
+const grantArrayOpt = grant.array().optional();
+const urlArrayOpt = z.string().url().array().optional();
+
+export const arrayFields = z.object({
+  match: stringArrayOpt,
+  excludeMatch: stringArrayOpt,
+  include: stringArrayOpt,
+  exclude: stringArrayOpt,
+  grants: grantArrayOpt,
+  require: urlArrayOpt
+});
+
+export const metadata = singleFields.merge(recordFields).merge(arrayFields);
+
 export type Metadata = z.infer<typeof metadata>;
+export type MetaSingles = z.infer<typeof singleFields>;
+export type MetaArrays = z.infer<typeof arrayFields>;
+export type MetaRecords = z.infer<typeof recordFields>;
 
 export const metadataKey = metadata.keyof();
 
