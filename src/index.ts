@@ -1,9 +1,8 @@
 import type { OutputOptions, SourceMap } from "rollup";
 import type { Plugin } from "vite";
-import { isGrants } from "./schema/complex";
 
-import { isMetadata, RawMetadata } from "./schema/index";
-import { Grant } from "./schema/primitives";
+import { RawMetadata } from "./schema/index";
+import { Grant, isGrant } from "./schema/primitives";
 
 import { UserScript } from "./user-script";
 
@@ -49,131 +48,9 @@ export function defineMetadata(opts: RawMetadata): RawMetadata {
 export async function plugin(metadata: RawMetadata): Promise<Plugin> {
   const script = await UserScript.from(metadata);
 
-  const _moduleGrants: Map<string, Grant[]> = new Map();
-  const _grantRegex: RegExp = /(GM(?:\.|_)\S+?|window\.(?:focus|close))\s*?\(/g;
-  const _defaultGrants: Grant[] = [];
-  const _headers: string[] = [];
-
-  function addMetadata(key: string, val: string) {
-    return `// @${key} ${val}\n`;
-  }
-
-  function toKebab(str: string) {
-    return str.replace(/[A-Z]/g, char => `-${char.toLowerCase()}`);
-  }
-
-  if (!metadata) {
-    throw new Error("Required parameter metadata is undefined");
-  }
-
-  const result = await isMetadata.safeParseAsync(metadata);
-
-  if (!result.success) {
-    const err = result.error.errors.pop();
-
-    throw new Error(
-      `Validation of Violent Monkey metadata failed: metadata.${err?.path.join(
-        "."
-      )} (${err?.message})`
-    );
-  }
-
-  const md = result.data;
-
-  if (md.grants) {
-    _defaultGrants.push(...md.grants);
-  }
-
-  // for (const field in md) {
-  //   const result = isBool.or(isNonEmptyString).safeParse(md[field as MetadataKey]);
-
-  //   if (!result.success || !result.data) {
-  //     continue;
-  //   }
-
-  //   let fmt: string;
-
-  //   if (field.endsWith("Url")) {
-  //     fmt = field.replace("Url", "URL");
-  //   } else {
-  //     fmt = toKebab(field);
-  //   }
-
-  //   _headers.push(addMetadata(fmt, result.data as string));
-  // }
-
-  if (md.require) {
-    for (const dependency of md.require) {
-      _headers.push(addMetadata("require", dependency));
-    }
-
-    // _headers.push(...md.require.map(r => addMetadata("require", r)));
-  }
-
-  if (md.include) {
-    for (const include of md.include) {
-      _headers.push(addMetadata("include", include));
-    }
-
-    // _headers.push(...md.include.map(i => addMetadata("include", i)));
-  }
-
-  if (md.exclude) {
-    for (const exclude of md.exclude) {
-      _headers.push(addMetadata("exclude", exclude));
-    }
-
-    // _headers.push(...md.exclude.map(e => addMetadata("exclude", e)));
-  }
-
-  if (md.match) {
-    for (const match of md.match) {
-      _headers.push(addMetadata("match", match));
-    }
-
-    // _headers.push(...md.match.map(m => addMetadata("match", m)));
-  }
-
-  if (md.excludeMatch) {
-    for (const excludeMatch of md.excludeMatch) {
-      _headers.push(addMetadata("exclude-match", excludeMatch));
-    }
-
-    // _headers.push(...md.excludeMatch.map(em => addMetadata("exclude-match", em)));
-  }
-
-  if (md.resources) {
-    for (const [key, value] of md.resources.entries()) {
-      _headers.push(addMetadata("resource", `${key} ${value}`));
-    }
-
-    // for (const key in md.resources) {
-    //   const value = md.resources[key];
-    //   _headers.push(addMetadata("resource", `${key} ${value}`));
-    // }
-  }
-
-  if (md.localizedDescription) {
-    for (const [key, value] of md.localizedDescription.entries()) {
-      _headers.push(addMetadata(`description:${key}`, value));
-    }
-
-    // for (const key in md.localizedDescription) {
-    //   const value = md.localizedDescription[key];
-    //   _headers.push(addMetadata(`description:${key}`, value));
-    // }
-  }
-
-  if (md.localizedName) {
-    for (const [key, value] of md.localizedName.entries()) {
-      _headers.push(addMetadata(`name:${key}`, value));
-    }
-
-    // for (const key in md.localizedName) {
-    //   const value = md.localizedName[key];
-    //   _headers.push(addMetadata(`name:${key}`, value));
-    // }
-  }
+  const defaultGrants = script.getSet("grants");
+  const codeGrants = new Map<string, Set<Grant>>();
+  const grantRegex: RegExp = /(GM(?:\.|_)\S+?|window\.(?:focus|close))\s*?\(/g;
 
   return {
     name: "violent-monkey",
@@ -181,21 +58,23 @@ export async function plugin(metadata: RawMetadata): Promise<Plugin> {
      * Store all grants found in the code.
      */
     async transform(code, id) {
-      const grants: Grant[] = [];
+      codeGrants.delete(id);
 
-      // find all grants from code and parse and validate them
-      for (const match of code.matchAll(_grantRegex)) {
+      const grants = new Set<Grant>();
+
+      for (const match of code.matchAll(grantRegex)) {
         if (match.length > 0) {
-          const res = await isGrants.safeParseAsync(match[1]);
+          const res = await isGrant.safeParseAsync(match[1]);
 
           if (res.success) {
-            grants.push(...res.data);
+            grants.add(res.data);
           }
         }
       }
 
-      // filter all duplicate grants
-      _moduleGrants.set(id, [...new Set(grants)]);
+      if (grants.size > 0) {
+        codeGrants.set(id, grants);
+      }
 
       return code;
     },
@@ -204,37 +83,29 @@ export async function plugin(metadata: RawMetadata): Promise<Plugin> {
       bundle: { [fileName: string]: AssetInfo | ChunkInfo },
       _isWrite: boolean
     ) {
-      const headers: string[] = [..._headers];
+      /**
+       * Get all grants from code & config
+       */
+      const grants: Grant[] = [];
 
-      // Get all grants from config & code and append to header
-      let grants: Grant[] = [];
-
-      // Get module grants
-      for (const kvp of _moduleGrants) {
-        grants.push(...kvp[1]);
+      for (const codeGrant of codeGrants.values()) {
+        grants.push(...codeGrant);
       }
 
-      // Combine module grants and default grants
-      grants = [...new Set([...grants, ..._defaultGrants])].sort();
-
-      if (grants.length > 0) {
-        for (const grant of grants) {
-          headers.push(addMetadata("grant", grant));
-        }
-      } else {
-        headers.push(addMetadata("grant", "none"));
+      if (defaultGrants) {
+        grants.push(...defaultGrants);
       }
 
-      // Generate metadata
-      let metadataBlock = "// ==UserScript==\n";
+      script.setSet("grants", new Set(grants));
 
-      for (const header of headers) {
-        metadataBlock += header;
-      }
+      /**
+       * Generate header info
+       */
+      const headers = script.toString();
 
-      metadataBlock += "// ==/UserScript==\n";
-
-      // Append to the entrypoints
+      /**
+       * Append to the entry points
+       */
       for (const fileName in bundle) {
         const fileInfo = bundle[fileName];
 
@@ -242,7 +113,7 @@ export async function plugin(metadata: RawMetadata): Promise<Plugin> {
           continue;
         }
 
-        fileInfo.code = `${metadataBlock}\n${fileInfo.code}`;
+        fileInfo.code = `${headers}\n${fileInfo.code}`;
       }
     }
   } as Plugin;
