@@ -1,6 +1,8 @@
 import { ZodError } from "zod";
 import { isMaps, isPrimitives, isSets, Maps, Metadata, Primitives, RawMetadata, Sets } from "./schema/complex";
 
+type SetsKey = keyof Sets;
+
 export class UserScript {
   private headers: string;
   private shouldRebuild: boolean;
@@ -32,6 +34,27 @@ export class UserScript {
   private primitives: Primitives;
   private sets: Sets; // todo, infer type from MetaArrays[MetaArraysKey][number]
   private maps: Maps;
+
+  public getSet<T extends SetsKey, K extends Sets[T]>(key: T) {
+    const value = this.sets[key];
+
+    if (!value) {
+      return;
+    }
+
+    return new Set([...value]) as K;
+  }
+
+  public setSet<T extends SetsKey, K extends Sets[T]>(key: T, value: K) {
+    if (!value) {
+      return;
+    }
+
+    const set = new Set([...value]) as K;
+
+    this.sets[key] = set;
+    this.shouldRebuild = true;
+  }
 
   constructor(name: string) {
     this.primitives = isPrimitives.parse({ name });
